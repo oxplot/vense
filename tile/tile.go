@@ -45,9 +45,8 @@ type tile struct {
 }
 
 type Set struct {
-	bits   []uint64
-	length int
-	group  *Group
+	bits  []uint64
+	group *Group
 }
 
 func newSet(g *Group) *Set {
@@ -60,11 +59,10 @@ func (s *Set) Add(tile string) {
 		return
 	}
 	i := t.index
-	if s.length <= i {
+	if len(s.bits) <= (i / 64) {
 		b := make([]uint64, i/64+1)
 		copy(b, s.bits)
 		s.bits = b
-		s.length = i + 1
 	}
 	s.bits[i/64] |= uint64(1 << (i % 64))
 }
@@ -75,7 +73,7 @@ func (s *Set) Remove(tile string) {
 		return
 	}
 	i := t.index
-	if s.length <= i {
+	if len(s.bits) <= (i / 64) {
 		return
 	}
 	s.bits[i/64] &= ^uint64(1 << (i % 64))
@@ -87,7 +85,7 @@ func (s *Set) Has(tile string) bool {
 		return false
 	}
 	i := t.index
-	if s.length <= i {
+	if len(s.bits) <= (i / 64) {
 		return false
 	}
 	return s.bits[i/64]&uint64(1<<(i%64)) == 1
@@ -95,7 +93,6 @@ func (s *Set) Has(tile string) bool {
 
 func (s *Set) Clear() {
 	s.bits = nil
-	s.length = 0
 }
 
 type SetGrid struct {
