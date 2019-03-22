@@ -16,13 +16,27 @@ type Group struct {
 	tilesByIndex []*tile
 }
 
-func (g *Group) NewTile(name string) {
-	t = &tile{
-		index: len(g.nameMap),
-		name:  name,
+func NewGroup() *Group {
+	return &Group{
+		tilesByName: map[string]*tile{},
 	}
-	g.tilesByName[name] = t
+}
+
+func (g *Group) Add(tileName string) {
+	if g.Has(tileName) {
+		return
+	}
+	t := &tile{
+		index: len(g.tilesByName),
+		name:  tileName,
+	}
+	g.tilesByName[tileName] = t
 	g.tilesByIndex = append(g.tilesByIndex, t)
+}
+
+func (g *Group) Has(tileName string) bool {
+	_, ok := g.tilesByName[tileName]
+	return ok
 }
 
 func (g *Group) EdgeSet(tile string, edge Edge) *Set {
@@ -64,7 +78,7 @@ func (s *Set) Add(tile string) {
 		copy(b, s.bits)
 		s.bits = b
 	}
-	s.bits[i/64] |= uint64(1 << (i % 64))
+	s.bits[i/64] |= uint64(1 << uint(i%64))
 }
 
 func (s *Set) Remove(tile string) {
@@ -76,7 +90,7 @@ func (s *Set) Remove(tile string) {
 	if len(s.bits) <= (i / 64) {
 		return
 	}
-	s.bits[i/64] &= ^uint64(1 << (i % 64))
+	s.bits[i/64] &= ^uint64(1 << uint(i%64))
 }
 
 func (s *Set) Has(tile string) bool {
@@ -88,7 +102,7 @@ func (s *Set) Has(tile string) bool {
 	if len(s.bits) <= (i / 64) {
 		return false
 	}
-	return s.bits[i/64]&uint64(1<<(i%64)) == 1
+	return s.bits[i/64]&uint64(1<<uint(i%64)) == 1
 }
 
 func (s *Set) Clear() {
@@ -96,4 +110,5 @@ func (s *Set) Clear() {
 }
 
 type SetGrid struct {
+	cells [][]*tile
 }
