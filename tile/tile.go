@@ -1,5 +1,12 @@
 package tile
 
+import (
+	"fmt"
+	"math/bits"
+	"math/rand"
+	"strings"
+)
+
 type Edge int
 
 const edgeCount = 4
@@ -86,19 +93,9 @@ func (s *Set) Add(tile string) {
 }
 
 func (s *Set) AddAll() {
-	gSize := s.group.Size()
-	if gSize == 0 {
-		return
+	for _, t := range s.group.tilesByIndex {
+		s.Add(t.name)
 	}
-	s.bits = make([]uint64, (gSize-1)/64)
-	fullInts := gSize / 64
-	for i := 0; i < fullInts; i++ {
-		s.bits[i] = uint64(1<<64 - 1)
-	}
-	if gSize%64 == 0 {
-		return
-	}
-	s.bits[len(s.bits)-1] = (1<<uint(gSize%64) - 1)
 }
 
 func (s *Set) Remove(tile string) {
@@ -122,20 +119,46 @@ func (s *Set) Has(tile string) bool {
 	if len(s.bits) <= (i / 64) {
 		return false
 	}
-	return s.bits[i/64]&uint64(1<<uint(i%64)) == 1
+	return s.bits[i/64]&uint64(1<<uint(i%64)) > 0
 }
 
 func (s *Set) Intersect(other *Set) {
+	minLen := len(s.bits)
+	if len(other.bits) < minLen {
+		minLen = len(other.bits)
+	}
+	for i := 0; i < minLen; i++ {
+		s.bits[i] &= other.bits[i]
+	}
+	s.bits = s.bits[0:minLen]
 }
 
 func (s *Set) Union(other *Set) {
+	minLen := len(s.bits)
+	if len(other.bits) < minLen {
+		minLen = len(other.bits)
+	}
+	for i := 0; i < minLen; i++ {
+		s.bits[i] |= other.bits[i]
+	}
+	if len(other.bits) > len(s.bits) {
+		s.bits = append(s.bits, other.bits[len(s.bits):]...)
+	}
+}
+
+func (s *Set) Size() int {
+	size := 0
+	for _, b := range s.bits {
+		size += bits.OnesCount64(b)
+	}
+	return size
 }
 
 func (s *Set) Tiles() []string {
 	tiles := []string{}
-	for n := range s.group.tilesByName {
-		if s.Has(n) {
-			tiles = append(tiles, n)
+	for _, t := range s.group.tilesByIndex {
+		if s.Has(t.name) {
+			tiles = append(tiles, t.name)
 		}
 	}
 	return tiles
@@ -145,23 +168,168 @@ func (s *Set) Clear() {
 	s.bits = nil
 }
 
-func CollapseCell(grid [][]*Set, x, y int) {
-}
+type Grid [][]*Set
 
-func CollapseGrid(grid [][]*Set, startX, startY int) {
-}
+func NewGrid(width, height int, group *Group) Grid {
+	grid := Grid(make([][]*Set, width))
 
-func GenerateGrid(width, height, randomSeed uint) (grid [][]*Set, resolved bool) {
-	grid = make([][]*Set, width)
-
-	for x := 0; x < width; x++ {
+	for x := range grid {
 		newCol := make([]*Set, height)
-		grid.cells[x] = newCol
-		for y := 0; y < height; y++ {
-			s := NewSet(group)
-			s.AddAll()
-			grid.cells[x][y] = s
+		grid[x] = newCol
+		for y := range newCol {
+			newCol[y] = NewSet(group)
 		}
 	}
+	return grid
+}
 
+func (g Grid) Superposition() {
+	for _, c := range g {
+		for _, s := range c {
+			s.AddAll()
+		}
+	}
+}
+
+func (g Grid) CollapseCell(x, y int) {
+	group := g[0][0].group
+	if x > 0 {
+		s := NewSet(group)
+		for _, t := range g[x][y].Tiles() {
+			s.Union(group.EdgeSet(t, Left))
+			//fmt.Printf("%+v\n", s.bits)
+		}
+		g[x-1][y].Intersect(s)
+		//fmt.Printf("%+v\n", s.bits)
+	}
+	if y > 0 {
+		s := NewSet(group)
+		for _, t := range g[x][y].Tiles() {
+			s.Union(group.EdgeSet(t, Top))
+		}
+		g[x][y-1].Intersect(s)
+	}
+	if x < len(g)-1 {
+		s := NewSet(group)
+		for _, t := range g[x][y].Tiles() {
+			s.Union(group.EdgeSet(t, Right))
+		}
+		g[x+1][y].Intersect(s)
+	}
+	if y < len(g[0])-1 {
+		s := NewSet(group)
+		for _, t := range g[x][y].Tiles() {
+			s.Union(group.EdgeSet(t, Bottom))
+		}
+		g[x][y+1].Intersect(s)
+	}
+	//fmt.Printf("-- X: %d   Y: %d\n", x, y)
+	//printGrid(g)
+}
+
+func (g Grid) Collapse(startX, startY int) {
+	for x := startX; x < len(g); x++ {
+		for y := startY; y < len(g[x]); y++ {
+			g.CollapseCell(x, y)
+		}
+		for y := startY - 1; y > 0; y-- {
+			g.CollapseCell(x, y)
+		}
+	}
+	for x := startX - 1; x > 0; x-- {
+		for y := startY; y < len(g[x]); y++ {
+			g.CollapseCell(x, y)
+		}
+		for y := startY - 1; y > 0; y-- {
+			g.CollapseCell(x, y)
+		}
+	}
+}
+
+func GenerateGrid(width, height int, group *Group, randomSeed int64) (g Grid, ok bool) {
+	rnd := rand.New(rand.NewSource(randomSeed))
+	g = NewGrid(width, height, group)
+	g.Superposition()
+
+	firstX := rnd.Int() % width
+	firstY := rnd.Int() % height
+	firstCellTiles := g[firstX][firstY].Tiles()
+	firstTile := firstCellTiles[rnd.Int()%len(firstCellTiles)]
+	g[firstX][firstY].Clear()
+	g[firstX][firstY].Add(firstTile)
+	g.Collapse(firstX, firstY)
+
+	//printGrid(g)
+
+	lastX, lastY, lastSize := -1, -1, -1
+	for {
+		x, y, min, max := nextBestCell(g)
+		if min == 1 && max == 1 {
+			printGrid(g)
+			return g, true
+		}
+		if min < 1 {
+			return g, false
+		}
+		size := g[x][y].Size()
+		if x == lastX && y == lastY && size == lastSize {
+			return g, false
+		}
+		lastX, lastY, lastSize = x, y, size
+		nextCellTiles := g[x][y].Tiles()
+		picked := nextCellTiles[rnd.Int()%len(nextCellTiles)]
+		g[x][y].Clear()
+		g[x][y].Add(picked)
+		g.Collapse(x, y)
+
+		//printGrid(g)
+	}
+}
+
+func nextBestCell(g Grid) (x, y, min, max int) {
+	var bestX, bestY int
+	bestMin := g[0][0].group.Size()
+	min = bestMin
+	for x, c := range g {
+		for y, s := range c {
+			ss := s.Size()
+			if ss > 1 && ss < bestMin {
+				bestMin = s.Size()
+				bestX, bestY = x, y
+			}
+			if ss < min {
+				min = ss
+			}
+			if ss > max {
+				max = ss
+			}
+		}
+	}
+	return bestX, bestY, min, max
+}
+
+func printSet(s *Set) {
+	fmt.Printf("[%s]", strings.Join(s.Tiles(), ","))
+}
+
+func printGrid(g Grid) {
+	fmt.Println("---")
+	for y := range g[0] {
+		for x := range g {
+			printSet(g[x][y])
+			fmt.Print(" , ")
+		}
+		fmt.Print("\n")
+	}
+}
+
+func PrintGroup(g *Group) {
+	for t := range g.tilesByName {
+		fmt.Printf("%s:\n", t)
+		fmt.Printf("  left:   %s\n", strings.Join(g.EdgeSet(t, Left).Tiles(), ","))
+		fmt.Printf("  right:  %s\n", strings.Join(g.EdgeSet(t, Right).Tiles(), ","))
+		fmt.Printf("  top:    %s\n", strings.Join(g.EdgeSet(t, Top).Tiles(), ","))
+		fmt.Printf("  bottom: %s\n", strings.Join(g.EdgeSet(t, Bottom).Tiles(), ","))
+		fmt.Println()
+	}
 }

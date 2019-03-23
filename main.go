@@ -13,12 +13,12 @@ import (
 
 var (
 	sizeRegexp = regexp.MustCompile(`^\s*(\d+)\s*[xX]\s*(\d+)\s*$`)
-	lineRegexp = regexp.MustCompile(`^\s*([^/=\s]+)\s*/\s*([trlb])\s*=\s*([^/=\s])+/([trlb])\s*$`)
+	lineRegexp = regexp.MustCompile(`^\s*([^/=\s]+)\s*/\s*([trlb])\s*=\s*([^/=\s]+)/([trlb])\s*$`)
 )
 
 type size struct {
-	width  uint
-	height uint
+	width  int
+	height int
 }
 
 func (s *size) String() string {
@@ -35,8 +35,8 @@ func (s *size) Set(v string) error {
 	if h == 0 || w == 0 {
 		return fmt.Errorf("grid width and height must be > 0")
 	}
-	s.width = uint(w)
-	s.height = uint(h)
+	s.width = int(w)
+	s.height = int(h)
 
 	return nil
 }
@@ -102,6 +102,9 @@ func run() error {
 		tileGroup.EdgeSet(n1, e1).Add(n2)
 		tileGroup.EdgeSet(n2, e2).Add(n1)
 	}
+
+	_, ok := tile.GenerateGrid(gridSize.width, gridSize.height, tileGroup, 0)
+	fmt.Println(ok)
 
 	return nil
 }
