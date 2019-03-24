@@ -75,7 +75,10 @@ type Set struct {
 }
 
 func NewSet(group *Group) *Set {
-	return &Set{group: group}
+	return &Set{
+		bits:  make([]uint64, 0, len(group.tilesByIndex)/64+1),
+		group: group,
+	}
 }
 
 func (s *Set) Add(tile string) {
@@ -177,7 +180,7 @@ func (s *Set) tiles() []*tile {
 }
 
 func (s *Set) Clear() {
-	s.bits = nil
+	s.bits = s.bits[:0]
 }
 
 type Grid [][]*Set
@@ -206,29 +209,29 @@ func (g Grid) Superposition() {
 func (g Grid) CollapseCell(x, y int) {
 	tiles := g[x][y].tiles()
 	group := g[0][0].group
+	s := NewSet(group)
 	if x > 0 {
-		s := NewSet(group)
 		for _, t := range tiles {
 			s.Union(t.edgeSets[Left])
 		}
 		g[x-1][y].Intersect(s)
 	}
 	if y > 0 {
-		s := NewSet(group)
+		s.Clear()
 		for _, t := range tiles {
 			s.Union(t.edgeSets[Top])
 		}
 		g[x][y-1].Intersect(s)
 	}
 	if x < len(g)-1 {
-		s := NewSet(group)
+		s.Clear()
 		for _, t := range tiles {
 			s.Union(t.edgeSets[Right])
 		}
 		g[x+1][y].Intersect(s)
 	}
 	if y < len(g[0])-1 {
-		s := NewSet(group)
+		s.Clear()
 		for _, t := range tiles {
 			s.Union(t.edgeSets[Bottom])
 		}
