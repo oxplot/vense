@@ -165,6 +165,17 @@ func (s *Set) Tiles() []string {
 	return tiles
 }
 
+func (s *Set) tiles() []*tile {
+	tiles := make([]*tile, 0, s.Size())
+	for _, t := range s.group.tilesByIndex {
+		i := t.index
+		if len(s.bits) > (i/64) && s.bits[i/64]&uint64(1<<uint(i%64)) > 0 {
+			tiles = append(tiles, t)
+		}
+	}
+	return tiles
+}
+
 func (s *Set) Clear() {
 	s.bits = nil
 }
@@ -193,33 +204,33 @@ func (g Grid) Superposition() {
 }
 
 func (g Grid) CollapseCell(x, y int) {
-	tiles := g[x][y].Tiles()
+	tiles := g[x][y].tiles()
 	group := g[0][0].group
 	if x > 0 {
 		s := NewSet(group)
 		for _, t := range tiles {
-			s.Union(group.EdgeSet(t, Left))
+			s.Union(t.edgeSets[Left])
 		}
 		g[x-1][y].Intersect(s)
 	}
 	if y > 0 {
 		s := NewSet(group)
 		for _, t := range tiles {
-			s.Union(group.EdgeSet(t, Top))
+			s.Union(t.edgeSets[Top])
 		}
 		g[x][y-1].Intersect(s)
 	}
 	if x < len(g)-1 {
 		s := NewSet(group)
 		for _, t := range tiles {
-			s.Union(group.EdgeSet(t, Right))
+			s.Union(t.edgeSets[Right])
 		}
 		g[x+1][y].Intersect(s)
 	}
 	if y < len(g[0])-1 {
 		s := NewSet(group)
 		for _, t := range tiles {
-			s.Union(group.EdgeSet(t, Bottom))
+			s.Union(t.edgeSets[Bottom])
 		}
 		g[x][y+1].Intersect(s)
 	}
