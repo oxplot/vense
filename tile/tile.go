@@ -193,39 +193,36 @@ func (g Grid) Superposition() {
 }
 
 func (g Grid) CollapseCell(x, y int) {
+	tiles := g[x][y].Tiles()
 	group := g[0][0].group
 	if x > 0 {
 		s := NewSet(group)
-		for _, t := range g[x][y].Tiles() {
+		for _, t := range tiles {
 			s.Union(group.EdgeSet(t, Left))
-			//fmt.Printf("%+v\n", s.bits)
 		}
 		g[x-1][y].Intersect(s)
-		//fmt.Printf("%+v\n", s.bits)
 	}
 	if y > 0 {
 		s := NewSet(group)
-		for _, t := range g[x][y].Tiles() {
+		for _, t := range tiles {
 			s.Union(group.EdgeSet(t, Top))
 		}
 		g[x][y-1].Intersect(s)
 	}
 	if x < len(g)-1 {
 		s := NewSet(group)
-		for _, t := range g[x][y].Tiles() {
+		for _, t := range tiles {
 			s.Union(group.EdgeSet(t, Right))
 		}
 		g[x+1][y].Intersect(s)
 	}
 	if y < len(g[0])-1 {
 		s := NewSet(group)
-		for _, t := range g[x][y].Tiles() {
+		for _, t := range tiles {
 			s.Union(group.EdgeSet(t, Bottom))
 		}
 		g[x][y+1].Intersect(s)
 	}
-	//fmt.Printf("-- X: %d   Y: %d\n", x, y)
-	//printGrid(g)
 }
 
 func (g Grid) Collapse(startX, startY int) {
