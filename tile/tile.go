@@ -155,9 +155,10 @@ func (s *Set) Size() int {
 }
 
 func (s *Set) Tiles() []string {
-	tiles := []string{}
+	tiles := make([]string, 0, s.Size())
 	for _, t := range s.group.tilesByIndex {
-		if s.Has(t.name) {
+		i := t.index
+		if len(s.bits) > (i/64) && s.bits[i/64]&uint64(1<<uint(i%64)) > 0 {
 			tiles = append(tiles, t.name)
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"runtime/pprof"
 	"strconv"
 
 	"github.com/oxplot/vense/tile"
@@ -110,6 +111,16 @@ func run() error {
 }
 
 func main() {
+	f, err := os.Create("prof")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	if err := pprof.StartCPUProfile(f); err != nil {
+		panic(err)
+	}
+	defer pprof.StopCPUProfile()
+
 	flag.Var(gridSize, "size", "grid size in wxh - e.g. 12x14")
 	flag.Parse()
 	if err := run(); err != nil {
