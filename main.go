@@ -1,9 +1,9 @@
 package main
 
 import (
-	"binary"
 	"bufio"
 	"crypto/rand"
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"os"
@@ -104,15 +104,25 @@ func run() error {
 		tileGroup.EdgeSet(n2, e2).Add(n1)
 	}
 
-	_, ok := tile.GenerateGrid(gridSize.width, gridSize.height, tileGroup, randomSeed)
-	fmt.Println(ok)
+	grid, ok := tile.GenerateGrid(gridSize.width, gridSize.height, tileGroup, randomSeed)
+	if !ok {
+		return fmt.Errorf("cannot collapse the grid onto a distinct state")
+	}
+
+	for y := 1; y < grid.Height(); y++ {
+		fmt.Print(grid[0][y].Tiles()[0])
+		for x := 1; x < grid.Width(); x++ {
+			fmt.Printf(",%s", grid[x][y].Tiles()[0])
+		}
+		fmt.Print("\n")
+	}
 
 	return nil
 }
 
 func main() {
 	flag.Var(gridSize, "size", "grid size in wxh - e.g. 12x14")
-	flag.Int64Var(&randomSeed, "seed", 0, "random seed - if not specified, a random seed is used")
+	flag.Int64Var(&randomSeed, "seed", 0, "random seed - if 0 or not specified, a random seed is used")
 	flag.Parse()
 	if randomSeed == 0 {
 		var b [8]byte
@@ -120,9 +130,10 @@ func main() {
 		if _, err = rand.Read(b[:]); err != nil {
 			panic(err)
 		}
-		randomSeed, err = int64(binary.LittleEndian.Unit64(b[:]))
+		randomSeed = int64(binary.LittleEndian.Uint64(b[:]))
 	}
 	if err := run(); err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "error: %s\n", err.Error())
+		os.Exit(1)
 	}
 }

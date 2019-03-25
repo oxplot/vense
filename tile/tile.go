@@ -1,10 +1,8 @@
 package tile
 
 import (
-	"fmt"
 	"math/bits"
 	"math/rand"
-	"strings"
 )
 
 type Edge int
@@ -198,6 +196,14 @@ func NewGrid(width, height int, group *Group) Grid {
 	return grid
 }
 
+func (g Grid) Width() int {
+	return len(g)
+}
+
+func (g Grid) Height() int {
+	return len(g[0])
+}
+
 func (g Grid) Superposition() {
 	for _, c := range g {
 		for _, s := range c {
@@ -271,13 +277,10 @@ func GenerateGrid(width, height int, group *Group, randomSeed int64) (g Grid, ok
 	g[firstX][firstY].Add(firstTile)
 	g.Collapse(firstX, firstY)
 
-	//printGrid(g)
-
 	lastX, lastY, lastSize := -1, -1, -1
 	for {
 		x, y, min, max := nextBestCell(g)
 		if min == 1 && max == 1 {
-			printGrid(g)
 			return g, true
 		}
 		if min < 1 {
@@ -293,8 +296,6 @@ func GenerateGrid(width, height int, group *Group, randomSeed int64) (g Grid, ok
 		g[x][y].Clear()
 		g[x][y].Add(picked)
 		g.Collapse(x, y)
-
-		//printGrid(g)
 	}
 }
 
@@ -318,30 +319,4 @@ func nextBestCell(g Grid) (x, y, min, max int) {
 		}
 	}
 	return bestX, bestY, min, max
-}
-
-func printSet(s *Set) {
-	fmt.Printf("[%s]", strings.Join(s.Tiles(), ","))
-}
-
-func printGrid(g Grid) {
-	fmt.Println("---")
-	for y := range g[0] {
-		for x := range g {
-			printSet(g[x][y])
-			fmt.Print(" , ")
-		}
-		fmt.Print("\n")
-	}
-}
-
-func PrintGroup(g *Group) {
-	for t := range g.tilesByName {
-		fmt.Printf("%s:\n", t)
-		fmt.Printf("  left:   %s\n", strings.Join(g.EdgeSet(t, Left).Tiles(), ","))
-		fmt.Printf("  right:  %s\n", strings.Join(g.EdgeSet(t, Right).Tiles(), ","))
-		fmt.Printf("  top:    %s\n", strings.Join(g.EdgeSet(t, Top).Tiles(), ","))
-		fmt.Printf("  bottom: %s\n", strings.Join(g.EdgeSet(t, Bottom).Tiles(), ","))
-		fmt.Println()
-	}
 }
