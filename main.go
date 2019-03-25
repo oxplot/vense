@@ -1,12 +1,13 @@
 package main
 
 import (
+	"binary"
 	"bufio"
+	"crypto/rand"
 	"flag"
 	"fmt"
 	"os"
 	"regexp"
-	"runtime/pprof"
 	"strconv"
 
 	"github.com/oxplot/vense/tile"
@@ -15,6 +16,9 @@ import (
 var (
 	sizeRegexp = regexp.MustCompile(`^\s*(\d+)\s*[xX]\s*(\d+)\s*$`)
 	lineRegexp = regexp.MustCompile(`^\s*([^/=\s]+)\s*/\s*([trlb])\s*=\s*([^/=\s]+)/([trlb])\s*$`)
+
+	gridSize   = &size{width: 10, height: 10}
+	randomSeed = int64(0)
 )
 
 type size struct {
@@ -41,10 +45,6 @@ func (s *size) Set(v string) error {
 
 	return nil
 }
-
-var (
-	gridSize = &size{width: 10, height: 10}
-)
 
 func parseInputLine(l string) (name1 string, e1 tile.Edge, name2 string, e2 tile.Edge, err error) {
 	m := lineRegexp.FindStringSubmatch(l)
@@ -104,25 +104,24 @@ func run() error {
 		tileGroup.EdgeSet(n2, e2).Add(n1)
 	}
 
-	_, ok := tile.GenerateGrid(gridSize.width, gridSize.height, tileGroup, 0)
+	_, ok := tile.GenerateGrid(gridSize.width, gridSize.height, tileGroup, randomSeed)
 	fmt.Println(ok)
 
 	return nil
 }
 
 func main() {
-	f, err := os.Create("prof")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-	if err := pprof.StartCPUProfile(f); err != nil {
-		panic(err)
-	}
-	defer pprof.StopCPUProfile()
-
 	flag.Var(gridSize, "size", "grid size in wxh - e.g. 12x14")
+	flag.Int64Var(&randomSeed, "seed", 0, "random seed - if not specified, a random seed is used")
 	flag.Parse()
+	if randomSeed == 0 {
+		var b [8]byte
+		var err error
+		if _, err = rand.Read(b[:]); err != nil {
+			panic(err)
+		}
+		randomSeed, err = int64(binary.LittleEndian.Unit64(b[:]))
+	}
 	if err := run(); err != nil {
 		panic(err)
 	}
