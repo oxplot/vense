@@ -1,0 +1,15 @@
+#!/bin/sh
+# grid_to_image - converts the textual grid output of vense to a single
+#                 image made up of image tile files.
+
+if [ "$#" -lt 1 ]; then
+  echo "Usage: $0 tile-path-template" >&2
+  exit 1
+fi
+
+TILE_PATH_TPL="$1"
+
+LINE_1=$(head -1)
+COLS=$(expr "$(echo "$LINE_1" | tr -dc ',' | wc -c)" + 1)
+
+montage $( (echo "$LINE_1"; cat) | tr , '\n' | grep . | while read t; do printf "$TILE_PATH_TPL\n" "$t"; done) -tile "$COLS"x -geometry +0+0 -
