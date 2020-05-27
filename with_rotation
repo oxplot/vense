@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+
+import re
+import sys
+
+line_pat = re.compile(
+  r"^([^{\s]+)\s*\{\s*([^,\s']+'?)\s*,\s*([^,\s']+'?)\s*,\s*([^,\s']+'?)\s*,\s*([^}\s']+'?)\s*\}$")
+
+cw = dict(zip("trbl", "rblt"))
+
+def tile_cw_name(t):
+  if t.endswith('_90'):
+    return t[:-2] + '180'
+  if t.endswith('_180'):
+    return t[:-3] + '270'
+  if t.endswith('_270'):
+    return t[:-4]
+  return t + '_90'
+
+for l in (l.strip() for l in sys.stdin):
+  if not l:
+    continue
+  m = line_pat.match(l)
+  if not m:
+    raise SystemExit("bad line format")
+  tile, top, right, bottom, left = m.groups()
+  for _ in range(4):
+    print(f'{tile}{{{top}, {right}, {bottom}, {left}}}')
+    tile = tile_cw_name(tile)
+    top, right, bottom, left = left, top, right, bottom
