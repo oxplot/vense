@@ -288,7 +288,9 @@ func GenerateGrid(width, height int, group *Group, randomSeed int64) (g Grid, ok
 		}
 		size := g[x][y].Size()
 		if x == lastX && y == lastY && size == lastSize {
-			return g, false
+			x = rnd.Int() % width
+			y = rnd.Int() % height
+			size = g[x][y].Size()
 		}
 		lastX, lastY, lastSize = x, y, size
 		nextCellTiles := g[x][y].Tiles()
