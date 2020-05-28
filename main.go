@@ -6,10 +6,8 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"regexp"
-	"runtime/pprof"
 	"strconv"
 
 	"github.com/oxplot/vense/tile"
@@ -123,16 +121,6 @@ func run() error {
 }
 
 func main() {
-
-	f, err := os.Create("profile")
-	if err != nil {
-		log.Fatal("could not create CPU profile: ", err)
-	}
-	defer f.Close()
-	if err := pprof.StartCPUProfile(f); err != nil {
-		log.Fatal("could not start CPU profile: ", err)
-	}
-	defer pprof.StopCPUProfile()
 
 	flag.Var(gridSize, "size", "grid size in wxh - e.g. 12x14")
 	flag.Int64Var(&randomSeed, "seed", 0, "random seed - if 0 or not specified, a random seed is used")

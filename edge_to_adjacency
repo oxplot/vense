@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+
+import re
+import sys
+import collections
+
+line_pat = re.compile(
+  r"^([^{\s]+)\s*\{\s*([^,\s']+'?)\s*,\s*([^,\s']+'?)\s*,\s*([^,\s']+'?)\s*,\s*([^}\s']+'?)\s*\}$")
+lines = list(line_pat.match(l.strip()).groups() for l in sys.stdin if l.strip())
+opp = dict(zip("trbl", "bltr"))
+asym_edges = set()
+
+def edge_match(e1, e2):
+  e1_clean = e1.rstrip("'")
+  e2_clean = e2.rstrip("'")
+  if e1_clean != e2_clean:
+    return False
+  if e1_clean in asym_edges:
+    if e1.endswith("'") and e2.endswith("'"):
+      return False
+    if not e1.endswith("'") and not e2.endswith("'"):
+      return False
+  return True
+
+for _, top, right, bottom, left in lines:
+  for e in (top, right, bottom, left):
+    if e.endswith("'"):
+      asym_edges.add(e[:-1])
+
+for li, (tile1, top1, right1, bottom1, left1) in enumerate(lines):
+  for ri in range(li, len(lines)):
+    tile2, top2, right2, bottom2, left2 = lines[ri]
+    if edge_match(top1, bottom2):
+      print(f"{tile1}/t={tile2}/b")
+    if edge_match(left1, right2):
+      print(f"{tile1}/l={tile2}/r")
+    if tile1 != tile2:
+      if edge_match(bottom1, top2):
+        print(f"{tile1}/b={tile2}/t")
+      if edge_match(right1, left2):
+        print(f"{tile1}/r={tile2}/l")

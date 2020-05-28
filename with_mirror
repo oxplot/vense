@@ -8,30 +8,25 @@ line_pat = re.compile(
   r"^([^{\s]+)\s*\{\s*([^,\s']+'?)\s*,\s*([^,\s']+'?)\s*,\s*([^,\s']+'?)\s*,\s*([^}\s']+'?)\s*\}$")
 
 cw = dict(zip("trbl", "rblt"))
-edges = collections.defaultdict(bool) # True if non-symmetric
+asym_edges = set()
 
 lines = list(line_pat.match(l.strip()).groups() for l in sys.stdin if l.strip())
 
 for tile, top, right, bottom, left in lines:
   print(f'{tile}{{{top}, {right}, {bottom}, {left}}}')
-  if top.endswith("'"):
-    edges[top.rstrip("'")] = True
-  if right.endswith("'"):
-    edges[right.rstrip("'")] = True
-  if bottom.endswith("'"):
-    edges[bottom.rstrip("'")] = True
-  if left.endswith("'"):
-    edges[left.rstrip("'")] = True
+  for e in (top, right, bottom, left):
+    if e.endswith("'"):
+      asym_edges.add(e[:-1])
 
 for tile, top, right, bottom, left in lines:
   tile = tile + "_mirror"
   right, left = left, right
-  if edges[right.rstrip("'")]:
+  if right.rstrip("'") in asym_edges:
     right = right[:-1] if right.endswith("'") else right + "'"
-  if edges[left.rstrip("'")]:
+  if left.rstrip("'") in asym_edges:
     left = left[:-1] if left.endswith("'") else left + "'"
-  if edges[top.rstrip("'")]:
+  if top.rstrip("'") in asym_edges:
     top = top[:-1] if top.endswith("'") else top + "'"
-  if edges[bottom.rstrip("'")]:
+  if bottom.rstrip("'") in asym_edges:
     bottom = bottom[:-1] if bottom.endswith("'") else bottom + "'"
   print(f'{tile}{{{top}, {right}, {bottom}, {left}}}')
